@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Modern Tic-Tac-Toe</title>
+  <style>
+    :root {
+      --primary: #232946;
+      --secondary: #eebbc3;
+      --accent: #b8c1ec;
+      --bg: #e028a9;
+      --x-color: #ff595e;
+      --o-color: #1982c4;
+      --radius: 18px;
+      --shadow: 0 8px 32px 0 rgba(35,41,70,0.12);
+    }
+    body {
+      background: var(--bg);
+      color: var(--primary);
+      font-family: 'Segoe UI', 'Roboto', Arial, sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+    }
+    .container {
+      margin-top: 40px;
+      background: #b8c1ec;
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 32px 24px 24px 24px;
+      max-width: 380px;
+      width: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    h1 {
+      font-weight: 700;
+      letter-spacing: 2px;
+      margin-bottom: 18px;
+      color: var(--primary);
+      font-size: 2.1rem;
+      text-align: center;
+    }
+    .mode-select {
+      display: flex;
+      gap: 16px;
+      margin-bottom: 18px;
+    }
+    .mode-btn {
+      background: var(--accent);
+      color: var(--primary);
+      border: none;
+      border-radius: var(--radius);
+      padding: 10px 18px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      outline: none;
+    }
+    .mode-btn.active, .mode-btn:hover {
+      background: var(--secondary);
+      color: var(--primary);
+    }
+    .scoreboard {
+      display: flex;
+      justify-content: space-between;
+      width: 100%;
+      margin-bottom: 18px;
+      font-size: 1.1rem;
+      font-weight: 600;
+      letter-spacing: 1px;
+    }
+    .board {
+      display: grid;
+      grid-template-columns: repeat(3, 80px);
+      grid-template-rows: repeat(3, 80px);
+      gap: 10px;
+      margin-bottom: 18px;
+      background: var(--accent);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      padding: 10px;
+    }
+    .square {
+      background: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 2.5rem;
+      font-weight: 700;
+      color: var(--primary);
+      cursor: pointer;
+      transition: background 0.15s, box-shadow 0.15s;
+      box-shadow: 0 2px 8px 0 rgba(35,41,70,0.06);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      outline: none;
+      user-select: none;
+    }
+    .square.x { color: var(--x-color); }
+    .square.o { color: var(--o-color); }
+    .square:active {
+      background: var(--accent);
+    }
+    .status {
+      font-size: 1.1rem;
+      margin-bottom: 12px;
+      min-height: 28px;
+      text-align: center;
+      font-weight: 500;
+      color: var(--primary);
+    }
+    .reset-btn {
+      background: var(--primary);
+      color: #fff;
+      border: none;
+      border-radius: var(--radius);
+      padding: 10px 22px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      margin-top: 8px;
+      transition: background 0.2s;
+      outline: none;
+      box-shadow: 0 2px 8px 0 rgba(35,41,70,0.08);
+    }
+    .reset-btn:hover {
+      background: var(--secondary);
+      color: var(--primary);
+    }
+    @media (max-width: 500px) {
+      .container {
+        padding: 16px 4px 12px 4px;
+        max-width: 98vw;
+      }
+      .board {
+        grid-template-columns: repeat(3, 22vw);
+        grid-template-rows: repeat(3, 22vw);
+        gap: 4vw;
+        padding: 2vw;
+      }
+      .square {
+        font-size: 2rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Tic-Tac-Toe</h1>
+    <div class="mode-select">
+      <button class="mode-btn active" id="pvp-btn">Player vs Player</button>
+      <button class="mode-btn" id="ai-btn">Player vs AI</button>
+    </div>
+    <div class="scoreboard">
+      <span id="score-x">X: 0</span>
+      <span id="score-o">O: 0</span>
+      <span id="score-draw">Draw: 0</span>
+    </div>
+    <div class="status" id="status"></div>
+    <div class="board" id="board"></div>
+    <button class="reset-btn" id="reset-btn">Reset Game</button>
+  </div>
+  <script>
+    const boardEl = document.getElementById('board');
+    const statusEl = document.getElementById('status');
+    const resetBtn = document.getElementById('reset-btn');
+    const pvpBtn = document.getElementById('pvp-btn');
+    const aiBtn = document.getElementById('ai-btn');
+    const scoreXEl = document.getElementById('score-x');
+    const scoreOEl = document.getElementById('score-o');
+    const scoreDrawEl = document.getElementById('score-draw');
+
+    let board = Array(9).fill('');
+    let currentPlayer = 'X';
+    let gameActive = true;
+    let mode = 'pvp';
+    let scores = { X: 0, O: 0, Draw: 0 };
+
+    function renderBoard() {
+      boardEl.innerHTML = '';
+      board.forEach((cell, idx) => {
+        const btn = document.createElement('button');
+        btn.className = 'square' + (cell ? ' ' + cell.toLowerCase() : '');
+        btn.textContent = cell;
+        btn.disabled = !!cell || !gameActive;
+        btn.addEventListener('click', () => handleMove(idx));
+        boardEl.appendChild(btn);
+      });
+    }
+
+    function renderStatus() {
+      if (checkWinner(board, 'X')) {
+        statusEl.textContent = 'X wins! 🎉';
+      } else if (checkWinner(board, 'O')) {
+        statusEl.textContent = 'O wins! 🎉';
+      } else if (board.every(cell => cell)) {
+        statusEl.textContent = "It's a draw!";
+      } else {
+        statusEl.textContent = (mode === 'ai' && currentPlayer === 'O')
+          ? "AI's turn (O)"
+          : `${currentPlayer}'s turn`;
+      }
+    }
+
+    function renderScores() {
+      scoreXEl.textContent = `X: ${scores.X}`;
+      scoreOEl.textContent = `O: ${scores.O}`;
+      scoreDrawEl.textContent = `Draw: ${scores.Draw}`;
+    }
+
+    function resetGame(full = false) {
+      board = Array(9).fill('');
+      currentPlayer = 'X';
+      gameActive = true;
+      if (full) scores = { X: 0, O: 0, Draw: 0 };
+      renderBoard();
+      renderStatus();
+      renderScores();
+    }
+
+    function handleMove(idx) {
+      if (!gameActive || board[idx]) return;
+      board[idx] = currentPlayer;
+      renderBoard();
+
+      if (checkWinner(board, currentPlayer)) {
+        gameActive = false;
+        scores[currentPlayer]++;
+        renderStatus();
+        renderScores();
+        return;
+      }
+      if (board.every(cell => cell)) {
+        gameActive = false;
+        scores.Draw++;
+        renderStatus();
+        renderScores();
+        return;
+      }
+
+      currentPlayer = currentPlayer === 'X' ? 'O' : 'X';
+      renderStatus();
+
+      if (mode === 'ai' && currentPlayer === 'O' && gameActive) {
+        setTimeout(aiMove, 500);
+      }
+    }
+
+    function checkWinner(b, player) {
+      const wins = [
+        [0,1,2],[3,4,5],[6,7,8],
+        [0,3,6],[1,4,7],[2,5,8],
+        [0,4,8],[2,4,6]
+      ];
+      return wins.some(line => line.every(i => b[i] === player));
+    }
+
+    function aiMove() {
+      for (let i = 0; i < 9; i++) {
+        if (!board[i]) {
+          board[i] = 'X';
+          if (checkWinner(board, 'X')) {
+            board[i] = 'O';
+            renderBoard();
+            if (checkWinner(board, 'O')) {
+              gameActive = false;
+              scores.O++;
+              renderStatus();
+              renderScores();
+              return;
+            }
+            if (board.every(cell => cell)) {
+              gameActive = false;
+              scores.Draw++;
+              renderStatus();
+              renderScores();
+              return;
+            }
+            currentPlayer = 'X';
+            renderStatus();
+            return;
+          }
+          board[i] = '';
+        }
+      }
+      const empty = board.map((cell, i) => cell ? null : i).filter(i => i !== null);
+      if (empty.length) {
+        const move = empty[Math.floor(Math.random() * empty.length)];
+        board[move] = 'O';
+        renderBoard();
+        if (checkWinner(board, 'O')) {
+          gameActive = false;
+          scores.O++;
+          renderStatus();
+          renderScores();
+          return;
+        }
+        if (board.every(cell => cell)) {
+          gameActive = false;
+          scores.Draw++;
+          renderStatus();
+          renderScores();
+          return;
+        }
+        currentPlayer = 'X';
+        renderStatus();
+      }
+    }
+
+    pvpBtn.addEventListener('click', () => {
+      mode = 'pvp';
+      pvpBtn.classList.add('active');
+      aiBtn.classList.remove('active');
+      resetGame();
+    });
+    aiBtn.addEventListener('click', () => {
+      mode = 'ai';
+      aiBtn.classList.add('active');
+      pvpBtn.classList.remove('active');
+      resetGame();
+    });
+
+    resetBtn.addEventListener('click', () => resetGame(true));
+
+    resetGame();
+  </script>
+</body>
+</html>
